@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Restaurant, MenuItem
@@ -29,6 +29,7 @@ def newMenuItem(restaurant_id):
             name=request.form['name'], restaurant_id=restaurant_id)
         session.add(newItem)
         session.commit()
+        flash("new item successfully added")
         return redirect(url_for('restaurantMenu', restaurant_id=restaurant_id))
     else:
         return render_template('newmenuitem.html', restaurant_id=restaurant_id)
@@ -42,10 +43,10 @@ def editMenuItem(restaurant_id, menu_id):
         editItem = session.query(MenuItem).filter_by(id=menu_id).one()
         editItem.name = request.form['name']
         session.commit()
+        flash("menu item successfully edited")
         return redirect(url_for('restaurantMenu', restaurant_id=restaurant_id))
     else:
         return render_template('editmenuitem.html', restaurant_id=restaurant_id, menu_id=menu_id)
-
 
 # Task 3: Create a route for deleteMenuItem function here
 
@@ -56,11 +57,19 @@ def deleteMenuItem(restaurant_id, menu_id):
     if request.method == "POST":
         session.delete(deleteItem)
         session.commit()
+        flash("menu item successfully deleted")
         return redirect(url_for('restaurantMenu', restaurant_id=restaurant_id))
     else:
         return render_template('deletemenuitem.html', item=deleteItem)
 
 
+@app.route('/restaurant/<int:restaurant_id>/menu/json/')
+def restaurantMenuJson(restaurant_id):
+    restaurant = session.query(Restaurant).filter_by(id=restaurant_id).one()
+    items = session.query(MenuItem).filter_by(restaurant_id=restaurant.id)
+    return jsonify(MenuItems=[i.serialize for i in items])
+
 if __name__ == '__main__':
+    app.secret_key = "tatta"
     app.debug = True
     app.run(host='0.0.0.0', port=5000)
