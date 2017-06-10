@@ -1,40 +1,42 @@
-<html>
+{% extends "base.html" %}
 
-<body>
+{% block content %}
 
-<h1>{{restaurant.name}}</h1>
 
-{% with messages = get_flashed_messages() %}
-{% if messages %}
 
-<ul>
-{% for message in messages %}
-  <li><strong>{{message}}</strong></li>
+  <h1 class="center-align">{{restaurant.name}}</h1>
+
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+
+  <ul>
+    {% for message in messages %}
+    <li><strong>{{message}}</strong></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endwith %}
+
+
+  {% for i in items %}
+  <div class="row">
+    <div class="col s12 m12">
+      <div class="card blue-grey darken-1">
+        <div class="card-content white-text">
+          <span class="card-title">{{i.name}}</span>
+          <p class="flow-text">{{i.description}} </p>
+          <br>
+          <a class="waves-effect waves-light btn">{{i.price}} $</a>
+        </div>
+        <div class="card-action">
+          <a href="{{url_for('editMenuItem', restaurant_id = restaurant.id, menu_id = i.id) }}">Edit Item</a>
+          <a href="{{url_for('deleteMenuItem', restaurant_id = restaurant.id, menu_id = i.id ) }}">Delete</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   {% endfor %}
-</ul>
-{% endif %}
-{% endwith %}
 
-
-{% for i in items %}
-
-<div>
-
-<p>{{i.name}}</p>
-
-<p>{{i.description}}</p>
-<p> {{i.price}} </p>
-
-
-<a href='{{url_for('editMenuItem', restaurant_id = restaurant.id, menu_id = i.id) }}'>Edit</a>
-
-</br>
-<a href = '{{url_for('deleteMenuItem', restaurant_id = restaurant.id, menu_id = i.id ) }}'>Delete</a>
-
-</div>
-
-
-{% endfor %}
-</body>
-
-</html>
+  {% endblock %}
