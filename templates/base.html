@@ -8,6 +8,11 @@
   <meta name="description" content="">
   <meta name="author" content="">
 
+  <!--LOAD PRE-REQUISITES FOR GOOGLE SIGN IN -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js">
+  </script>
+
+  <script src="//apis.google.com/js/platform.js?onload=start"> </script>
   <!-- Import Materialize.css  -->
   <link rel="stylesheet" href="/static/css/materialize.css">
   <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
@@ -23,9 +28,9 @@
       <div class="container">
         <a href="/" class="brand-logo">menu-site</a>
         <ul id="nav-mobile" class="right hide-on-med-and-down">
-          <li><a href="#">Restaurants</a></li>
-          <li><a href="#">Login/Signup</a></li>
-          <li><a href="#">Logout</a></li>
+          <li><a href="/restaurants">Restaurants</a></li>
+          <li><a href="/login">Login/Signup</a></li>
+          <li><a href="/logout">Logout</a></li>
         </ul>
       </div>
     </div>
