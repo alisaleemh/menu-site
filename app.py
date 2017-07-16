@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from database_setup import Restaurant, MenuItem
+from database_setup import Restaurant, MenuItem, User
 from session_manager import SessionManager
 from flask import session as login_session
 import random
@@ -20,6 +20,28 @@ client_secret = 'client_secret.json'
 CLIENT_ID = json.loads(
     open(client_secret, 'r').read())['web']['client_id']
 APPLICATION_NAME = "menu-site"
+
+
+def createUser(login_session):
+    newUser = User(name=login_session['username'], email=login_session['email'], picture=login_session['picture'])
+    db.session.add(newUser)
+    db.session.commit()
+    user = db.session.query(User).filter_by(email=login_session['email'].one())
+    return user.id
+
+
+def getUserInfo(user_id):
+    user = db.session.query(User).filter_by(id=user_id).one()
+    return user
+
+
+def getUserId(email):
+    try:
+        user = db.session.query(User).filter_by(email=email).one
+        return user
+    except:
+        return None
+
 
 # Login Page
 
@@ -82,16 +104,16 @@ def gconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
-    stored_credentials = login_session.get('credentials')
+    stored_access_token = login_session.get('access_token')
     stored_gplus_id = login_session.get('gplus_id')
-    if stored_credentials is not None and gplus_id == stored_gplus_id:
+    if stored_access_token is not None and gplus_id == stored_gplus_id:
         response = make_response(json.dumps('Current user is already connected.'),
                                  200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
     # Store the access token in the session for later use.
-    login_session['credentials'] = credentials
+    login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
     # Get user info
@@ -121,34 +143,36 @@ def gconnect():
 def gdisconnect():
     if 'username' not in login_session:
         return redirect('/login')
+    for i in login_session:
+        print 'TATTA'
+        print i, login_session[i]
     access_token = login_session.get('access_token')
     print 'In gdisconnect access token is %s', access_token
     print 'User name is: '
     print login_session['username']
     if access_token is None:
- 	print 'Access Token is None'
-    	response = make_response(json.dumps('Current user not connected.'), 401)
-    	response.headers['Content-Type'] = 'application/json'
-    	return response
+        print 'Access Token is None'
+        response = make_response(json.dumps('Current user not connected.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
     print 'result is '
     print result
     if result['status'] == '200':
-	del login_session['access_token']
-    	del login_session['gplus_id']
-    	del login_session['username']
-    	del login_session['email']
-    	del login_session['picture']
-    	response = make_response(json.dumps('Successfully disconnected.'), 200)
-    	response.headers['Content-Type'] = 'application/json'
-    	return response
+        del login_session['access_token']
+        del login_session['gplus_id']
+        del login_session['username']
+        del login_session['email']
+        del login_session['picture']
+        response = make_response(json.dumps('Successfully disconnected.'), 200)
+        response.headers['Content-Type'] = 'application/json'
+        return response
     else:
-
-    	response = make_response(json.dumps('Failed to revoke token for given user.', 400))
-    	response.headers['Content-Type'] = 'application/json'
-    	return response
+        response = make_response(json.dumps('Failed to revoke token for given user.', 400))
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
 
 # List of All Restaurants
@@ -169,7 +193,7 @@ def newRestaurant():
             return redirect('/login')
     if request.method == 'POST':
         if request.form['name']:
-            newItem = Restaurant(name=request.form['name'])
+            newItem = Restaurant(name=request.form['name'], user_id=login_session['user_id'])
             db.session.add(newItem)
             db.session.commit()
             flash("new restaurant menu successfully created")
