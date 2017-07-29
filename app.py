@@ -100,7 +100,7 @@ def gconnect():
     if result['issued_to'] != CLIENT_ID:
         response = make_response(
             json.dumps("Token's client ID does not match app's."), 401)
-        print "Token's client ID does not match app's."
+
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -135,7 +135,7 @@ def gconnect():
     output += login_session['picture']
     output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
-    print "done!"
+
     return output
 
 
@@ -143,23 +143,14 @@ def gconnect():
 def gdisconnect():
     if 'username' not in login_session:
         return redirect('/login')
-    for i in login_session:
-        print 'TATTA'
-        print i, login_session[i]
     access_token = login_session.get('access_token')
-    print 'In gdisconnect access token is %s', access_token
-    print 'User name is: '
-    print login_session['username']
     if access_token is None:
-        print 'Access Token is None'
         response = make_response(json.dumps('Current user not connected.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
-    print 'result is '
-    print result
     if result['status'] == '200':
         del login_session['access_token']
         del login_session['gplus_id']
@@ -168,7 +159,10 @@ def gdisconnect():
         del login_session['picture']
         response = make_response(json.dumps('Successfully disconnected.'), 200)
         response.headers['Content-Type'] = 'application/json'
-        return response
+        flash("Sucessfully logged out")
+        return redirect(url_for('allRestaurants'))
+
+
     else:
         response = make_response(json.dumps('Failed to revoke token for given user.', 400))
         response.headers['Content-Type'] = 'application/json'
@@ -183,7 +177,10 @@ def gdisconnect():
 @app.route('/restaurants/all')
 def allRestaurants():
     restaurants = db.session.query(Restaurant).all()
-    return render_template('allRestaurants.html', restaurants=restaurants)
+    if 'username' not in login_session:
+        return render_template('publicRestaurants.html', login_session=login_session, restaurants=restaurants)
+    else:
+        return render_template('privateRestaurants.html', login_session=login_session, restaurants=restaurants)
 
 
 # Adds a New Restaurant Entry
@@ -208,8 +205,12 @@ def newRestaurant():
 def editRestaurant(restaurant_id):
     if 'username' not in login_session:
         return redirect('/login')
+    editItem = db.session.query(Restaurant).filter_by(id=restaurant_id).one()
+    username = getUserInfo(editItem.user_id)
+
+    if username != login_session['username']:
+        return "<script>function myFunction() {alert('You are not authorized to edit this restaurant. Please create your own restaurant in order to edit.');}</script><body onload='myFunction()''>"
     if request.method == 'POST':
-        editItem = db.session.query(Restaurant).filter_by(id=restaurant_id).one()
         editItem.name = request.form['name']
         db.session.commit()
         flash("restaurant %s successfully edited" % editItem.name)
@@ -220,11 +221,16 @@ def editRestaurant(restaurant_id):
 
 # Delete a Restaurant
 # Input: restaurant_id
-@app.route('/restaurant/<int:restaurant_id>', methods=['GET', 'POST'])
+@app.route('/restaurant/<int:restaurant_id>/delete', methods=['GET', 'POST'])
 def deleteRestaurant(restaurant_id):
     if 'username' not in login_session:
         return redirect('/login')
     deleteItem = db.session.query(Restaurant).filter_by(id=restaurant_id).one()
+    username = getUserInfo(deleteItem.user_id)
+
+    if username != login_session['username']:
+        flash("You are not authorized to delete this restaurant as you don't own it")
+        return redirect(url_for('allRestaurants'))
     if request.method == 'POST':
         db.session.delete(deleteItem)
         db.session.commit()
